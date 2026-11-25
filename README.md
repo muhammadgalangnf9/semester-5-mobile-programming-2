@@ -29,11 +29,11 @@ Project ini dikembangkan sebagai bagian dari **mata kuliah Mobile Programming 2*
 
 **Kelompok 5 | Mobile Programming 2**
 
-| No | Nama | NIM | Peran |
-|:--:|:---|:---|:---|
-| 1 | Muhammad Galang Nur Falsian | 19240646 | *(Isi Peran)* |
-| 2 | Muhammad Azra Rafly Satria | 19241132 | *(Isi Peran)* |
-| 3 | Aditiya Pramadi | 19242556 | *(Isi Peran)* |
+| No | Nama | NIM |
+|:--:|:---|:---|
+| 1 | Muhammad Galang Nur Falsian | 19240646 |
+| 2 | Muhammad Azra Rafly Satria | 19241132 |
+| 3 | Aditiya Pramadi | 19242556 |
 
 ---
 
