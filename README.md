@@ -1,4 +1,4 @@
-# 📱 SIMKAT — Sistem Informasi Manajemen Kegiatan RT
+# 📱 SIMKAT | Sistem Informasi Manajemen Kegiatan RT
 
 <div align="center">
 
