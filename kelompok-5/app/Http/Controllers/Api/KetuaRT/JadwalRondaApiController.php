@@ -57,7 +57,7 @@ class JadwalRondaApiController extends Controller
     public function show($id)
     {
         $jadwalRonda = JadwalRonda::where('status', 'aktif')
-            ->with('pengguna:id,nama')
+            ->with(['pengguna:id,nama', 'pengubah:id,nama'])
             ->find($id);
 
         if (!$jadwalRonda) {

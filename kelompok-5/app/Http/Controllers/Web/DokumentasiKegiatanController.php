@@ -138,6 +138,7 @@ class DokumentasiKegiatanController extends Controller
             'jenis' => $validated['jenis'],
             'link_drive' => $validated['link_drive'],
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -168,6 +169,7 @@ class DokumentasiKegiatanController extends Controller
             'jenis' => $validated['jenis'],
             'link_drive' => $validated['link_drive'],
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -188,6 +190,7 @@ class DokumentasiKegiatanController extends Controller
         $this->pastikanDokumentasiMilikKegiatan($kegiatan, $dokumentasi);
 
         $dokumentasi->delete();
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)

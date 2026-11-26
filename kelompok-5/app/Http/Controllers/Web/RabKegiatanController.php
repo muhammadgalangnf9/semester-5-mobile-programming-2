@@ -212,6 +212,7 @@ class RabKegiatanController extends Controller
             'total_biaya' => $totalBiaya,
             'sumber_dana' => $validated['sumber_dana'],
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -253,6 +254,7 @@ class RabKegiatanController extends Controller
             'total_biaya' => $totalBiaya,
             'sumber_dana' => $validated['sumber_dana'],
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -273,6 +275,7 @@ class RabKegiatanController extends Controller
         $this->pastikanRabMilikKegiatan($kegiatan, $rab);
 
         $rab->delete();
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)

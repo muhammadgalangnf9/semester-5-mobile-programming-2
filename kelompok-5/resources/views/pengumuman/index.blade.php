@@ -9,6 +9,10 @@
     $pengguna = Auth::user();
 
     $bolehKelola = (int) $pengguna->role_id === 2;
+    $bolehTinjau = (int) $pengguna->role_id === 1;
+    $adaFilter = request()->filled('nama_pengumuman')
+        || request()->filled('tanggal_dibuat')
+        || request()->filled('status');
 
     $labelStatus = [
         'draft' => 'Draft',
@@ -207,6 +211,44 @@
         padding: 16px 20px;
         border-top: 1px solid #e5e7eb;
     }
+
+    .filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        align-items: end;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+    }
+
+    .filters label {
+        display: block;
+        margin-bottom: 6px;
+        color: #4b5563;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .filters input,
+    .filters select {
+        width: 100%;
+        padding: 8px 10px;
+        color: #111827;
+        background: #fff;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 0.85rem;
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
 </style>
 
 <div class="page-header">
@@ -227,6 +269,55 @@
         {{ session('success') }}
     </div>
 @endif
+
+<form method="GET" action="{{ route('pengumuman.index') }}" class="filters">
+    <div>
+        <label for="nama_pengumuman">Nama pengumuman</label>
+        <input
+            type="search"
+            id="nama_pengumuman"
+            name="nama_pengumuman"
+            value="{{ request('nama_pengumuman') }}"
+            maxlength="150"
+            placeholder="Cari nama pengumuman"
+        >
+    </div>
+
+    @if ($bolehKelola || $bolehTinjau)
+        <div>
+            <label for="status">Filter label</label>
+            <select id="status" name="status">
+                <option value="">Semua Label</option>
+                @if ($bolehKelola)
+                    <option value="draft" @selected(request('status') === 'draft')>Draft</option>
+                @endif
+                <option value="menunggu_persetujuan" @selected(request('status') === 'menunggu_persetujuan')>Menunggu Persetujuan</option>
+                <option value="terbit" @selected(request('status') === 'terbit')>Disetujui</option>
+                @if ($bolehKelola)
+                    <option value="ditolak" @selected(request('status') === 'ditolak')>Ditolak</option>
+                    <option value="nonaktif" @selected(request('status') === 'nonaktif')>Nonaktif</option>
+                @endif
+            </select>
+        </div>
+    @endif
+
+    <div>
+        <label for="tanggal_dibuat">Tanggal dibuat</label>
+        <input
+            type="date"
+            id="tanggal_dibuat"
+            name="tanggal_dibuat"
+            value="{{ request('tanggal_dibuat') }}"
+        >
+    </div>
+
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        @if ($adaFilter)
+            <a href="{{ route('pengumuman.index') }}" class="btn btn-secondary">Bersihkan</a>
+        @endif
+    </div>
+</form>
 
 <div class="card">
 
@@ -313,7 +404,7 @@
                 @empty
                     <tr>
                         <td colspan="5" style="text-align:center; padding:25px;">
-                            Belum ada data pengumuman.
+                            {{ $adaFilter ? 'Tidak ada pengumuman yang sesuai filter.' : 'Belum ada data pengumuman.' }}
                         </td>
                     </tr>
                 @endforelse

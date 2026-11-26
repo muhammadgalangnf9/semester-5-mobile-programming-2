@@ -204,6 +204,17 @@
                         </p>
                     </div>
 
+                    {{-- TERAKHIR DIEDIT OLEH --}}
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">
+                            Terakhir Diedit Oleh
+                        </p>
+
+                        <p class="text-sm text-gray-800">
+                            {{ $jadwalRonda->pengubah?->nama ?? 'Belum tercatat' }}
+                        </p>
+                    </div>
+
                 </div>
             </div>
 

@@ -60,6 +60,8 @@ class KegiatanApiController extends Controller
         $kegiatan = Kegiatan::where('status', '!=', 'nonaktif')
             ->with([
                 'pengguna',
+                'pengaju',
+                'pengubah',
                 'disetujuiOleh',
                 'panitia',
                 'rab',
@@ -114,6 +116,7 @@ class KegiatanApiController extends Controller
 
         $kegiatan->update([
             'status' => 'disetujui',
+            'pengubah_id' => $request->user()->id,
             'disetujui_oleh' => $request->user()->id,
             'catatan_persetujuan' => $request->catatan_persetujuan,
             'diterbitkan_pada' => now(),
@@ -158,6 +161,7 @@ class KegiatanApiController extends Controller
 
         $kegiatan->update([
             'status' => 'ditolak',
+            'pengubah_id' => $request->user()->id,
             'disetujui_oleh' => null,
             'catatan_persetujuan' => $request->catatan_persetujuan,
             'diterbitkan_pada' => null,
@@ -173,7 +177,7 @@ class KegiatanApiController extends Controller
     /**
      * Membatalkan persetujuan kegiatan.
      */
-    public function batalkanPersetujuan($id)
+    public function batalkanPersetujuan(Request $request, $id)
     {
         $kegiatan = Kegiatan::where(
             'status',
@@ -189,6 +193,7 @@ class KegiatanApiController extends Controller
 
         $kegiatan->update([
             'status' => 'menunggu_persetujuan',
+            'pengubah_id' => $request->user()->id,
             'disetujui_oleh' => null,
             'catatan_persetujuan' => null,
             'diterbitkan_pada' => null,

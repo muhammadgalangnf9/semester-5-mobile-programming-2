@@ -312,6 +312,10 @@ class _DetailPengumumanScreenState extends State<DetailPengumumanScreen> {
     final namaPembuat = pengguna is Map
         ? pengguna['nama']?.toString() ?? '-'
         : '-';
+    final pengubah = _pengumuman!['pengubah'];
+    final namaPengubah = pengubah is Map
+        ? pengubah['nama']?.toString() ?? 'Belum tercatat'
+        : 'Belum tercatat';
 
     return RefreshIndicator(
       onRefresh: _ambilDetailPengumuman,
@@ -414,6 +418,11 @@ class _DetailPengumumanScreenState extends State<DetailPengumumanScreen> {
                   icon: Icons.person_outline,
                   label: 'Dibuat oleh',
                   value: namaPembuat,
+                ),
+                _buildInformasi(
+                  icon: Icons.edit_outlined,
+                  label: 'Terakhir diedit oleh',
+                  value: namaPengubah,
                 ),
                 if (_pengumuman!['disetujui_oleh'] is Map)
                   _buildInformasi(

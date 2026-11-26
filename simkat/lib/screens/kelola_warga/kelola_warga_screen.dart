@@ -29,6 +29,7 @@ class _KelolaWargaScreenState extends State<KelolaWargaScreen> {
   String? _filterGang;
   String? _filterBlok;
   String? _filterStatus;
+  String? _filterRole;
 
   int _currentPage = 1;
   int _lastPage = 1;
@@ -65,6 +66,7 @@ class _KelolaWargaScreenState extends State<KelolaWargaScreen> {
         gang: _filterGang,
         blok: _filterBlok,
         status: _filterStatus,
+        role: _filterRole,
         page: page,
       );
 
@@ -197,6 +199,7 @@ class _KelolaWargaScreenState extends State<KelolaWargaScreen> {
       _filterGang = null;
       _filterBlok = null;
       _filterStatus = null;
+      _filterRole = null;
     });
 
     _ambilDataWarga();
@@ -518,6 +521,59 @@ class _KelolaWargaScreenState extends State<KelolaWargaScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: _filterRole,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          labelText: 'Role',
+                          labelStyle: const TextStyle(fontSize: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: Text(
+                              'Semua role',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: 'ketua_rt',
+                            child: Text(
+                              'Ketua RT',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: 'warga_pj_kegiatan_dan_jadwal_ronda',
+                            child: Text(
+                              'Warga PJ Kegiatan dan Jadwal Ronda',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                          DropdownMenuItem<String>(
+                            value: 'warga_biasa',
+                            child: Text(
+                              'Warga Biasa',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _filterRole = value;
+                          });
+                          _ambilDataWarga();
+                        },
                       ),
                     ],
                   ),

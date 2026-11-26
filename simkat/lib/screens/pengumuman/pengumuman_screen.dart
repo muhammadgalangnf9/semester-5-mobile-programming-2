@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/services/auth_service.dart';
@@ -24,22 +26,39 @@ class _PengumumanScreenState extends State<PengumumanScreen> {
   int _currentPage = 1;
   int _lastPage = 1;
   int _totalPengumuman = 0;
+  int _requestVersion = 0;
   String _roleAktual = '';
+  late final TextEditingController _namaFilterController;
+  DateTime? _tanggalDibuatFilter;
+  String _statusFilter = 'semua';
+  Timer? _filterDebounce;
 
   bool get _bolehKelola => _roleAktual == 'warga_pj_kegiatan_dan_jadwal_ronda';
   bool get _bolehTinjau => _roleAktual == 'ketua_rt';
+  bool get _adaFilter =>
+      _namaFilterController.text.trim().isNotEmpty ||
+      _tanggalDibuatFilter != null ||
+      _statusFilter != 'semua';
 
   @override
   void initState() {
     super.initState();
+    _namaFilterController = TextEditingController();
     _ambilDataPengumuman();
   }
 
+  @override
+  void dispose() {
+    _filterDebounce?.cancel();
+    _namaFilterController.dispose();
+    super.dispose();
+  }
+
   Future<void> _ambilDataPengumuman({int page = 1}) async {
+    final requestVersion = ++_requestVersion;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _roleAktual = '';
     });
 
     try {
@@ -49,14 +68,32 @@ class _PengumumanScreenState extends State<PengumumanScreen> {
         throw Exception('Role pengguna tidak ditemukan.');
       }
 
-      if (!mounted) return;
+      if (!mounted || requestVersion != _requestVersion) return;
       setState(() => _roleAktual = role);
 
+      final namaPengumuman = _namaFilterController.text.trim();
+      final tanggalDibuat = _tanggalDibuatFilter == null
+          ? null
+          : _formatTanggalQuery(_tanggalDibuatFilter!);
+      final status = (_bolehKelola || _bolehTinjau) && _statusFilter != 'semua'
+          ? _statusFilter
+          : null;
       final response = _bolehKelola
-          ? await PengumumanService.getPengumumanKelola(page: page)
-          : await PengumumanService.getPengumuman(role: role, page: page);
+          ? await PengumumanService.getPengumumanKelola(
+              page: page,
+              namaPengumuman: namaPengumuman,
+              tanggalDibuat: tanggalDibuat,
+              status: status,
+            )
+          : await PengumumanService.getPengumuman(
+              role: role,
+              page: page,
+              namaPengumuman: namaPengumuman,
+              tanggalDibuat: tanggalDibuat,
+              status: status,
+            );
 
-      if (!mounted) return;
+      if (!mounted || requestVersion != _requestVersion) return;
 
       final data = response['data'] as List<dynamic>? ?? [];
       final meta = response['meta'] as Map<String, dynamic>? ?? {};
@@ -69,13 +106,169 @@ class _PengumumanScreenState extends State<PengumumanScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || requestVersion != _requestVersion) return;
 
       setState(() {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
         _isLoading = false;
       });
     }
+  }
+
+  String _formatTanggalQuery(DateTime tanggal) =>
+      '${tanggal.year.toString().padLeft(4, '0')}-'
+      '${tanggal.month.toString().padLeft(2, '0')}-'
+      '${tanggal.day.toString().padLeft(2, '0')}';
+
+  void _jadwalkanPencarianNama(String _) {
+    _filterDebounce?.cancel();
+    setState(() {});
+    _filterDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) _ambilDataPengumuman(page: 1);
+    });
+  }
+
+  Future<void> _pilihTanggalDibuat() async {
+    final tanggal = await showDatePicker(
+      context: context,
+      initialDate: _tanggalDibuatFilter ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (tanggal == null || !mounted) return;
+
+    _filterDebounce?.cancel();
+    setState(() {
+      _tanggalDibuatFilter = DateTime(tanggal.year, tanggal.month, tanggal.day);
+    });
+    await _ambilDataPengumuman(page: 1);
+  }
+
+  Future<void> _hapusFilterTanggal() async {
+    _filterDebounce?.cancel();
+    setState(() => _tanggalDibuatFilter = null);
+    await _ambilDataPengumuman(page: 1);
+  }
+
+  Future<void> _bersihkanFilter() async {
+    _filterDebounce?.cancel();
+    _namaFilterController.clear();
+    setState(() {
+      _tanggalDibuatFilter = null;
+      _statusFilter = 'semua';
+    });
+    await _ambilDataPengumuman(page: 1);
+  }
+
+  Widget _buildFilter() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            TextField(
+              controller: _namaFilterController,
+              onChanged: _jadwalkanPencarianNama,
+              decoration: InputDecoration(
+                labelText: 'Nama pengumuman',
+                hintText: 'Cari nama pengumuman',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _namaFilterController.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Hapus pencarian',
+                        onPressed: () {
+                          _namaFilterController.clear();
+                          _jadwalkanPencarianNama('');
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pilihTanggalDibuat,
+                    icon: const Icon(Icons.calendar_today_outlined),
+                    label: Text(
+                      _tanggalDibuatFilter == null
+                          ? 'Semua tanggal dibuat'
+                          : 'Dibuat: ${_formatTanggal(_formatTanggalQuery(_tanggalDibuatFilter!))}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                if (_tanggalDibuatFilter != null)
+                  IconButton(
+                    tooltip: 'Hapus filter tanggal',
+                    onPressed: _hapusFilterTanggal,
+                    icon: const Icon(Icons.close),
+                  ),
+              ],
+            ),
+            if (_bolehKelola || _bolehTinjau) ...[
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _statusFilter,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Filter label',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem(
+                    value: 'semua',
+                    child: Text('Semua Label'),
+                  ),
+                  if (_bolehKelola) ...[
+                    const DropdownMenuItem(
+                      value: 'draft',
+                      child: Text('Draft'),
+                    ),
+                  ],
+                  const DropdownMenuItem(
+                    value: 'menunggu_persetujuan',
+                    child: Text('Menunggu Persetujuan'),
+                  ),
+                  const DropdownMenuItem(
+                    value: 'terbit',
+                    child: Text('Disetujui'),
+                  ),
+                  if (_bolehKelola) ...[
+                    const DropdownMenuItem(
+                      value: 'ditolak',
+                      child: Text('Ditolak'),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'nonaktif',
+                      child: Text('Nonaktif'),
+                    ),
+                  ],
+                ],
+                onChanged: (status) {
+                  if (status == null) return;
+                  _filterDebounce?.cancel();
+                  setState(() => _statusFilter = status);
+                  _ambilDataPengumuman(page: 1);
+                },
+              ),
+            ],
+            if (_adaFilter)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _bersihkanFilter,
+                  icon: const Icon(Icons.filter_alt_off_outlined),
+                  label: const Text('Bersihkan filter'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _bukaDetailPengumuman(int pengumumanId) async {
@@ -395,6 +588,9 @@ class _PengumumanScreenState extends State<PengumumanScreen> {
             ),
             const SizedBox(height: 16),
 
+            _buildFilter(),
+            const SizedBox(height: 12),
+
             // Daftar Pengumuman
             Expanded(child: _buildDaftarPengumuman()),
 
@@ -493,16 +689,18 @@ class _PengumumanScreenState extends State<PengumumanScreen> {
     }
 
     if (_daftarPengumuman.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.campaign_outlined, size: 48, color: Colors.grey),
-            SizedBox(height: 12),
+            const Icon(Icons.campaign_outlined, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
             Text(
-              'Belum ada pengumuman.',
+              _adaFilter
+                  ? 'Tidak ada pengumuman yang sesuai filter.'
+                  : 'Belum ada pengumuman.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: const TextStyle(color: Colors.grey),
             ),
           ],
         ),

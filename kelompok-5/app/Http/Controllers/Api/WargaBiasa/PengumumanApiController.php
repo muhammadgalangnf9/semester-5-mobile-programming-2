@@ -13,9 +13,26 @@ class PengumumanApiController extends Controller
      */
     public function index(Request $request)
     {
-        $pengumuman = Pengumuman::with(['pengguna:id,nama', 'disetujuiOleh:id,nama'])
+        $filter = $request->validate([
+            'nama_pengumuman' => ['nullable', 'string', 'max:150'],
+            'tanggal_dibuat' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
+        $pengumuman = Pengumuman::with([
+            'pengguna:id,nama',
+            'pengubah:id,nama',
+            'disetujuiOleh:id,nama',
+        ])
             ->where('status', 'terbit')
             ->whereNotNull('diterbitkan_pada')
+            ->when(
+                $filter['nama_pengumuman'] ?? null,
+                fn ($query, $nama) => $query->where('judul', 'like', "%{$nama}%")
+            )
+            ->when(
+                $filter['tanggal_dibuat'] ?? null,
+                fn ($query, $tanggal) => $query->whereDate('created_at', $tanggal)
+            )
             ->orderByDesc('diterbitkan_pada')
             ->paginate(10);
 
@@ -37,7 +54,11 @@ class PengumumanApiController extends Controller
      */
     public function show($id)
     {
-        $pengumuman = Pengumuman::with(['pengguna:id,nama', 'disetujuiOleh:id,nama'])
+        $pengumuman = Pengumuman::with([
+            'pengguna:id,nama',
+            'pengubah:id,nama',
+            'disetujuiOleh:id,nama',
+        ])
             ->where('status', 'terbit')
             ->whereNotNull('diterbitkan_pada')
             ->find($id);

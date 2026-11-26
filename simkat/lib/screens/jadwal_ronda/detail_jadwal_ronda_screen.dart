@@ -201,6 +201,10 @@ class _DetailJadwalRondaScreenState extends State<DetailJadwalRondaScreen> {
     final dibuatOleh = pengguna is Map
         ? pengguna['nama']?.toString() ?? 'Tidak tercatat'
         : 'Tidak tercatat';
+    final pengubah = jadwal['pengubah'];
+    final diubahOleh = pengubah is Map
+        ? pengubah['nama']?.toString() ?? 'Belum tercatat'
+        : 'Belum tercatat';
 
     return RefreshIndicator(
       onRefresh: _ambilDetailJadwal,
@@ -319,6 +323,11 @@ class _DetailJadwalRondaScreenState extends State<DetailJadwalRondaScreen> {
                     icon: Icons.update_outlined,
                     label: 'Diupdate pada',
                     value: _formatTanggalWaktu(jadwal['updated_at']),
+                  ),
+                  _buildInformasi(
+                    icon: Icons.edit_outlined,
+                    label: 'Terakhir diedit oleh',
+                    value: diubahOleh,
                   ),
                 ],
               ),

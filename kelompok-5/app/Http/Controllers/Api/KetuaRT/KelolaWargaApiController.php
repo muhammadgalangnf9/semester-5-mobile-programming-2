@@ -39,8 +39,27 @@ class KelolaWargaApiController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Pengguna::with('role')
-            ->whereIn('role_id', $this->daftarRoleWarga());
+        $validated = $request->validate([
+            'role' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    'ketua_rt',
+                    'warga_pj_kegiatan_dan_jadwal_ronda',
+                    'warga_biasa',
+                ]),
+            ],
+        ]);
+
+        $query = Pengguna::with('role');
+
+        if (! empty($validated['role'])) {
+            $query->whereHas('role', function ($roleQuery) use ($validated) {
+                $roleQuery->where('nama_role', $validated['role']);
+            });
+        } else {
+            $query->whereIn('role_id', $this->daftarRoleWarga());
+        }
 
         // Pencarian nama atau username.
         if ($request->filled('search')) {
@@ -87,9 +106,11 @@ class KelolaWargaApiController extends Controller
                 ->orderBy('blok')
                 ->pluck('blok')
                 ->values(),
-            'ketua_rt' => Pengguna::with('role')
-                ->where('role_id', self::ROLE_KETUA_RT_ID)
-                ->first(),
+            'ketua_rt' => empty($validated['role'])
+                ? Pengguna::with('role')
+                    ->where('role_id', self::ROLE_KETUA_RT_ID)
+                    ->first()
+                : null,
             'meta' => [
                 'current_page' => $warga->currentPage(),
                 'last_page' => $warga->lastPage(),

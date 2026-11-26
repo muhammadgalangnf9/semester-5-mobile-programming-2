@@ -6,6 +6,25 @@ class PengumumanService {
   static const String _endpointWargaPJ = '/warga-pj/pengumuman';
   static const String _endpointWargaBiasa = '/warga-biasa/pengumuman';
 
+  static String _queryDaftarPengumuman({
+    required int page,
+    String? namaPengumuman,
+    String? tanggalDibuat,
+    String? status,
+  }) {
+    final parameters = <String, String>{'page': page.toString()};
+    if (namaPengumuman != null && namaPengumuman.trim().isNotEmpty) {
+      parameters['nama_pengumuman'] = namaPengumuman.trim();
+    }
+    if (tanggalDibuat != null && tanggalDibuat.isNotEmpty) {
+      parameters['tanggal_dibuat'] = tanggalDibuat;
+    }
+    if (status != null && status.isNotEmpty) {
+      parameters['status'] = status;
+    }
+    return Uri(queryParameters: parameters).query;
+  }
+
   // Mengambil token autentikasi
   static Future<String> _getToken() async {
     final token = await AuthService.getToken();
@@ -34,12 +53,21 @@ class PengumumanService {
   static Future<Map<String, dynamic>> getPengumuman({
     String? role,
     int page = 1,
+    String? namaPengumuman,
+    String? tanggalDibuat,
+    String? status,
   }) async {
     final rolePengguna = role ?? await AuthService.getRole();
     final endpoint = endpointBerdasarkanRole(rolePengguna);
+    final query = _queryDaftarPengumuman(
+      page: page,
+      namaPengumuman: namaPengumuman,
+      tanggalDibuat: tanggalDibuat,
+      status: status,
+    );
 
     return await ApiService.get(
-      '$endpoint?page=$page',
+      '$endpoint?$query',
       token: await _getToken(),
     );
   }
@@ -47,9 +75,18 @@ class PengumumanService {
   // Mengambil daftar pengumuman untuk pengelola (Warga PJ)
   static Future<Map<String, dynamic>> getPengumumanKelola({
     int page = 1,
+    String? namaPengumuman,
+    String? tanggalDibuat,
+    String? status,
   }) async {
+    final query = _queryDaftarPengumuman(
+      page: page,
+      namaPengumuman: namaPengumuman,
+      tanggalDibuat: tanggalDibuat,
+      status: status,
+    );
     return ApiService.get(
-      '$_endpointWargaPJ?page=$page',
+      '$_endpointWargaPJ?$query',
       token: await _getToken(),
     );
   }

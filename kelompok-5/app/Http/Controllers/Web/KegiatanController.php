@@ -262,6 +262,7 @@ class KegiatanController extends Controller
 
         $kegiatan = Kegiatan::create([
             'dibuat_oleh' => Auth::id(),
+            'pengubah_id' => Auth::id(),
             'nama_kegiatan' => $validated['nama_kegiatan'],
             'deskripsi' => $validated['deskripsi'] ?? null,
             'jenis_kegiatan' => $validated['jenis_kegiatan'],
@@ -302,6 +303,8 @@ class KegiatanController extends Controller
 
         $kegiatan->load([
             'pengguna',
+            'pengaju',
+            'pengubah',
             'panitia',
             'rab',
             'transaksi',
@@ -399,6 +402,7 @@ class KegiatanController extends Controller
         ]);
 
         $kegiatan->update([
+            'pengubah_id' => Auth::id(),
             'nama_kegiatan' => $validated['nama_kegiatan'],
             'deskripsi' => $validated['deskripsi'] ?? null,
             'jenis_kegiatan' => $validated['jenis_kegiatan'],
@@ -461,6 +465,7 @@ class KegiatanController extends Controller
             $statusBaru,
             $kegiatan
         );
+        $statusData['pengubah_id'] = Auth::id();
 
         $kegiatan->update($statusData);
 

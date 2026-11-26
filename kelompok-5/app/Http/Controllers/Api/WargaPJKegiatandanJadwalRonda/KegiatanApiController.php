@@ -4,14 +4,25 @@ namespace App\Http\Controllers\Api\WargaPJKegiatandanJadwalRonda;
 
 use App\Http\Controllers\Controller;
 use App\Models\Kegiatan;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class KegiatanApiController extends Controller
 {
+    private function kegiatanSesamaRole(Request $request): Builder
+    {
+        $roleId = $request->user()->role_id;
+
+        return Kegiatan::whereHas(
+            'pengguna',
+            fn ($query) => $query->where('role_id', $roleId)
+        );
+    }
+
     /**
-     * Menampilkan semua kegiatan milik Warga PJ yang login.
+     * Menampilkan kegiatan yang dibuat oleh sesama Warga PJ.
      */
     public function index(Request $request)
     {
@@ -24,12 +35,13 @@ class KegiatanApiController extends Controller
                     'draft',
                     'menunggu_persetujuan',
                     'disetujui',
+                    'ditolak',
                     'nonaktif',
                 ]),
             ],
         ]);
 
-        $kegiatan = Kegiatan::where('dibuat_oleh', $request->user()->id)
+        $kegiatan = $this->kegiatanSesamaRole($request)
             ->with('pengguna:id,nama')
             ->when(
                 $filter['nama_kegiatan'] ?? null,
@@ -67,13 +79,15 @@ class KegiatanApiController extends Controller
     }
 
     /**
-     * Menampilkan detail kegiatan milik sendiri.
+     * Menampilkan detail kegiatan yang dibuat oleh sesama Warga PJ.
      */
     public function show(Request $request, $id)
     {
-        $kegiatan = Kegiatan::where('dibuat_oleh', $request->user()->id)
+        $kegiatan = $this->kegiatanSesamaRole($request)
             ->with([
                 'pengguna:id,nama',
+                'pengaju:id,nama',
+                'pengubah:id,nama',
                 'disetujuiOleh:id,nama',
                 'panitia',
                 'rab',
@@ -86,7 +100,7 @@ class KegiatanApiController extends Controller
         if (!$kegiatan) {
             return response()->json([
                 'berhasil' => false,
-                'pesan' => 'Kegiatan tidak ditemukan atau bukan milik kamu.',
+                'pesan' => 'Kegiatan tidak ditemukan.',
             ], 404);
         }
 
@@ -130,6 +144,7 @@ class KegiatanApiController extends Controller
 
         $kegiatan = Kegiatan::create([
             'dibuat_oleh' => $request->user()->id,
+            'pengubah_id' => $request->user()->id,
             'nama_kegiatan' => $request->nama_kegiatan,
             'deskripsi' => $request->deskripsi,
             'jenis_kegiatan' => $request->jenis_kegiatan,
@@ -148,18 +163,18 @@ class KegiatanApiController extends Controller
     }
 
     /**
-     * Mengedit kegiatan milik sendiri.
+     * Mengedit kegiatan yang dibuat oleh sesama Warga PJ.
      */
     public function update(Request $request, $id)
     {
-        $kegiatan = Kegiatan::where('dibuat_oleh', $request->user()->id)
+        $kegiatan = $this->kegiatanSesamaRole($request)
             ->where('status', '!=', 'nonaktif')
             ->find($id);
 
         if (!$kegiatan) {
             return response()->json([
                 'berhasil' => false,
-                'pesan' => 'Kegiatan tidak ditemukan atau bukan milik kamu.',
+                'pesan' => 'Kegiatan tidak ditemukan.',
             ], 404);
         }
 
@@ -183,6 +198,7 @@ class KegiatanApiController extends Controller
         $statusLama = $kegiatan->status;
 
         $kegiatan->nama_kegiatan = $request->nama_kegiatan;
+        $kegiatan->pengubah_id = $request->user()->id;
         $kegiatan->deskripsi = $request->deskripsi;
         $kegiatan->jenis_kegiatan = $request->jenis_kegiatan;
         $kegiatan->tanggal_mulai = $request->tanggal_mulai;
@@ -194,6 +210,7 @@ class KegiatanApiController extends Controller
         // perubahan harus diperiksa ulang oleh Ketua RT.
         if ($statusLama === 'disetujui') {
             $kegiatan->status = 'menunggu_persetujuan';
+            $kegiatan->pengaju_id = $request->user()->id;
             $kegiatan->diterbitkan_pada = null;
             $kegiatan->disetujui_oleh = null;
             $kegiatan->catatan_persetujuan = null;
@@ -203,6 +220,7 @@ class KegiatanApiController extends Controller
         // status kembali menjadi draft.
         if ($statusLama === 'ditolak') {
             $kegiatan->status = 'draft';
+            $kegiatan->pengaju_id = null;
             $kegiatan->catatan_persetujuan = null;
             $kegiatan->disetujui_oleh = null;
         }
@@ -223,7 +241,7 @@ class KegiatanApiController extends Controller
      */
     public function ajukan(Request $request, $id)
     {
-        $kegiatan = Kegiatan::where('dibuat_oleh', $request->user()->id)
+        $kegiatan = $this->kegiatanSesamaRole($request)
             ->find($id);
 
         if (!$kegiatan) {
@@ -242,6 +260,8 @@ class KegiatanApiController extends Controller
 
         $kegiatan->update([
             'status' => 'menunggu_persetujuan',
+            'pengaju_id' => $request->user()->id,
+            'pengubah_id' => $request->user()->id,
             'disetujui_oleh' => null,
             'catatan_persetujuan' => null,
             'diterbitkan_pada' => null,
@@ -259,19 +279,20 @@ class KegiatanApiController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $kegiatan = Kegiatan::where('dibuat_oleh', $request->user()->id)
+        $kegiatan = $this->kegiatanSesamaRole($request)
             ->where('status', '!=', 'nonaktif')
             ->find($id);
 
         if (!$kegiatan) {
             return response()->json([
                 'berhasil' => false,
-                'pesan' => 'Kegiatan tidak ditemukan atau bukan milik kamu.',
+                'pesan' => 'Kegiatan tidak ditemukan.',
             ], 404);
         }
 
         $kegiatan->update([
             'status' => 'nonaktif',
+            'pengubah_id' => $request->user()->id,
             'dinonaktifkan_pada' => now(),
         ]);
 
@@ -286,19 +307,21 @@ class KegiatanApiController extends Controller
      */
     public function aktifkan(Request $request, $id)
     {
-        $kegiatan = Kegiatan::where('dibuat_oleh', $request->user()->id)
+        $kegiatan = $this->kegiatanSesamaRole($request)
             ->where('status', 'nonaktif')
             ->find($id);
 
         if (!$kegiatan) {
             return response()->json([
                 'berhasil' => false,
-                'pesan' => 'Kegiatan tidak ditemukan atau bukan milik kamu.',
+                'pesan' => 'Kegiatan tidak ditemukan atau belum berstatus nonaktif.',
             ], 404);
         }
 
         $kegiatan->update([
             'status' => 'draft',
+            'pengaju_id' => null,
+            'pengubah_id' => $request->user()->id,
             'diterbitkan_pada' => null,
             'disetujui_oleh' => null,
             'catatan_persetujuan' => null,

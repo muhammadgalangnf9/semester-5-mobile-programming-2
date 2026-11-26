@@ -333,6 +333,7 @@ class JadwalRondaController extends Controller
 
             $jadwal = JadwalRonda::create([
                 'dibuat_oleh' => Auth::id(),
+                'pengubah_id' => Auth::id(),
                 'hari' => $validated['hari'],
                 'peserta' => $validated['peserta'],
                 'waktu_mulai' => $validated['waktu_mulai'],
@@ -380,6 +381,7 @@ class JadwalRondaController extends Controller
     public function show(JadwalRonda $jadwalRonda)
     {
         $this->pastikanBolehMelihat();
+        $jadwalRonda->load('pengubah:id,nama');
 
         if (
             !$this->bolehKelola()
@@ -453,6 +455,7 @@ class JadwalRondaController extends Controller
                 'waktu_selesai' => $validated['waktu_selesai'],
                 'gang' => $validated['gang'],
                 'keterangan' => $validated['keterangan'] ?? null,
+                'pengubah_id' => Auth::id(),
             ]);
 
             $hariRonda = count($jadwalRonda->hari) === 7
@@ -503,6 +506,7 @@ class JadwalRondaController extends Controller
                 'dinonaktifkan_pada' => $statusBaru === 'nonaktif'
                     ? now()
                     : null,
+                'pengubah_id' => Auth::id(),
             ]);
 
             $hariRonda = count($jadwalRonda->hari ?? []) === 7

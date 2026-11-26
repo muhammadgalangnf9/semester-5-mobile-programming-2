@@ -10,6 +10,7 @@ class KelolaWargaService {
     String? gang,
     String? blok,
     String? status,
+    String? role,
     int page = 1,
   }) async {
     final token = await AuthService.getToken();
@@ -24,6 +25,7 @@ class KelolaWargaService {
       if (gang != null && gang.isNotEmpty) 'gang': gang,
       if (blok != null && blok.isNotEmpty) 'blok': blok,
       if (status != null && status.isNotEmpty) 'status': status,
+      if (role != null && role.isNotEmpty) 'role': role,
     };
 
     final uri = Uri(
