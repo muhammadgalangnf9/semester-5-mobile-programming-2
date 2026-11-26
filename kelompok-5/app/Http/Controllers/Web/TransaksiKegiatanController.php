@@ -182,6 +182,7 @@ class TransaksiKegiatanController extends Controller
             'keterangan' => $validated['keterangan'] ?? null,
             'link_bukti' => $validated['link_bukti'] ?? null,
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -217,6 +218,7 @@ class TransaksiKegiatanController extends Controller
             'keterangan' => $validated['keterangan'] ?? null,
             'link_bukti' => $validated['link_bukti'] ?? null,
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -237,6 +239,7 @@ class TransaksiKegiatanController extends Controller
         $this->pastikanTransaksiMilikKegiatan($kegiatan, $transaksi);
 
         $transaksi->delete();
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)

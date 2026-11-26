@@ -65,6 +65,8 @@ class KegiatanApiController extends Controller
             ])
             ->with([
                 'pengguna',
+                'pengaju',
+                'pengubah',
                 'disetujuiOleh:id,nama',
                 'panitia',
                 'rab',

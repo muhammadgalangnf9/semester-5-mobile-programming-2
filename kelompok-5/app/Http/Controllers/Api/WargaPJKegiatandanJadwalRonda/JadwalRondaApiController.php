@@ -30,7 +30,7 @@ class JadwalRondaApiController extends Controller
         ]);
 
         $jadwalRonda = JadwalRonda::query()
-            ->with('pengguna:id,nama')
+            ->with(['pengguna:id,nama', 'pengubah:id,nama'])
             ->when(
                 $filter['gang'] ?? null,
                 fn ($query, $gang) => $query->where('gang', $gang)
@@ -65,7 +65,10 @@ class JadwalRondaApiController extends Controller
             'berhasil' => true,
             'pesan' => 'Detail jadwal ronda berhasil diambil.',
             'data' => $this->muatPeserta(
-                $jadwalRonda->load('pengguna:id,nama')
+                $jadwalRonda->load([
+                    'pengguna:id,nama',
+                    'pengubah:id,nama',
+                ])
             ),
         ]);
     }
@@ -95,6 +98,7 @@ class JadwalRondaApiController extends Controller
             $jadwal = JadwalRonda::create([
                 ...$validated,
                 'dibuat_oleh' => $request->user()->id,
+                'pengubah_id' => $request->user()->id,
                 'status' => 'aktif',
                 'diterbitkan_pada' => now(),
                 'dinonaktifkan_pada' => null,
@@ -121,7 +125,10 @@ class JadwalRondaApiController extends Controller
         $validated = $this->validasi($request);
 
         DB::transaction(function () use ($validated, $request, $jadwalRonda) {
-            $jadwalRonda->update($validated);
+            $jadwalRonda->update([
+                ...$validated,
+                'pengubah_id' => $request->user()->id,
+            ]);
 
             $this->catatAktivitas(
                 $request,
@@ -202,6 +209,7 @@ class JadwalRondaApiController extends Controller
         $jadwalRonda->update([
             'status' => $status,
             'dinonaktifkan_pada' => $status === 'nonaktif' ? now() : null,
+            'pengubah_id' => $request->user()->id,
         ]);
 
         $aksi = $status === 'aktif' ? 'Mengaktifkan' : 'Menonaktifkan';
@@ -224,7 +232,10 @@ class JadwalRondaApiController extends Controller
 
     private function muatPeserta(JadwalRonda $jadwalRonda): JadwalRonda
     {
-        $jadwalRonda->loadMissing('pengguna:id,nama');
+        $jadwalRonda->loadMissing([
+            'pengguna:id,nama',
+            'pengubah:id,nama',
+        ]);
 
         $pesertaById = Pengguna::whereIn('id', $jadwalRonda->peserta ?? [])
             ->get(['id', 'nama', 'gang', 'blok'])

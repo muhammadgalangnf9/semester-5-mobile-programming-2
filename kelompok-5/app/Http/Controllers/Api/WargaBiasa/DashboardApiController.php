@@ -33,13 +33,17 @@ class DashboardApiController extends Controller
         $pengumumanTerbaru = Pengumuman::with('pengguna:id,nama')
             ->where('status', 'terbit')
             ->orderByDesc('diterbitkan_pada')
-            ->take(5)
             ->get();
 
-        // Jadwal ronda aktif yang mengikutsertakan warga yang login
+        // Jadwal aktif yang mengikutsertakan warga yang login.
         $jadwalRondaSaya = JadwalRonda::where('status', 'aktif')
+            ->orderBy('waktu_mulai')
             ->get()
-            ->filter(fn (JadwalRonda $j) => in_array($userId, $j->peserta ?? [], true))
+            ->filter(fn (JadwalRonda $jadwal) => in_array(
+                (int) $userId,
+                array_map('intval', $jadwal->peserta ?? []),
+                true
+            ))
             ->values();
 
         // Kegiatan yang sudah disetujui / aktif

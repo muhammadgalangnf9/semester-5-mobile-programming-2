@@ -151,6 +151,7 @@ class KegiatanPanitiaController extends Controller
             'jabatan' => $validated['jabatan'],
             'tugas' => $validated['tugas'] ?? null,
         ]);
+        $kegiatan->update(['pengubah_id' => Auth::id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -217,6 +218,7 @@ class KegiatanPanitiaController extends Controller
             'jabatan' => $validated['jabatan'],
             'tugas' => $validated['tugas'] ?? null,
         ]);
+        $kegiatan->update(['pengubah_id' => Auth::id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -250,6 +252,7 @@ class KegiatanPanitiaController extends Controller
         }
 
         $panitia->delete();
+        $kegiatan->update(['pengubah_id' => Auth::id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)

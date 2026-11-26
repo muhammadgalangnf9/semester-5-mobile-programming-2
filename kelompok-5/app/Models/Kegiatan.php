@@ -10,6 +10,8 @@ class Kegiatan extends Model
 
     protected $fillable = [
         'dibuat_oleh',
+        'pengaju_id',
+        'pengubah_id',
         'nama_kegiatan',
         'deskripsi',
         'jenis_kegiatan',
@@ -37,6 +39,16 @@ class Kegiatan extends Model
     public function pengguna()
     {
         return $this->belongsTo(Pengguna::class, 'dibuat_oleh');
+    }
+
+    public function pengaju()
+    {
+        return $this->belongsTo(Pengguna::class, 'pengaju_id');
+    }
+
+    public function pengubah()
+    {
+        return $this->belongsTo(Pengguna::class, 'pengubah_id');
     }
 
     /**

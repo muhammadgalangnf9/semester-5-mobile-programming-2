@@ -25,12 +25,14 @@ class KomponenKegiatanApiController extends Controller
         'sakit',
     ];
 
-    private function pastikanKegiatanMilikPengguna(
+    private function pastikanKegiatanSesamaRole(
         Request $request,
         Kegiatan $kegiatan
     ): void {
         abort_unless(
-            (int) $kegiatan->dibuat_oleh === (int) $request->user()->id,
+            $kegiatan->pengguna()
+                ->where('role_id', $request->user()->role_id)
+                ->exists(),
             404
         );
     }
@@ -91,10 +93,11 @@ class KomponenKegiatanApiController extends Controller
 
     public function storePanitia(Request $request, Kegiatan $kegiatan)
     {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $validated = $this->validasiPanitia($request, $kegiatan);
 
         $panitia = $kegiatan->panitia()->create($validated);
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil('Panitia berhasil ditambahkan.', $panitia, 201);
     }
@@ -104,7 +107,7 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         KegiatanPanitia $panitia
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $panitia);
         $validated = $this->validasiPanitia($request, $kegiatan, $panitia);
 
@@ -122,6 +125,7 @@ class KomponenKegiatanApiController extends Controller
         }
 
         $panitia->update($validated);
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil('Panitia berhasil diperbarui.', $panitia);
     }
@@ -131,7 +135,7 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         KegiatanPanitia $panitia
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $panitia);
 
         if (
@@ -147,10 +151,18 @@ class KomponenKegiatanApiController extends Controller
         }
 
         $panitia->delete();
+        $this->tandaiPengubah($request, $kegiatan);
 
         return response()->json([
             'berhasil' => true,
             'pesan' => 'Panitia berhasil dihapus.',
+        ]);
+    }
+
+    private function tandaiPengubah(Request $request, Kegiatan $kegiatan): void
+    {
+        $kegiatan->update([
+            'pengubah_id' => $request->user()->id,
         ]);
     }
 
@@ -178,10 +190,11 @@ class KomponenKegiatanApiController extends Controller
 
     public function storeRab(Request $request, Kegiatan $kegiatan)
     {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $rab = $kegiatan->rab()->create(
             $this->dataRab($this->validasiRab($request))
         );
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil('Item RAB berhasil ditambahkan.', $rab, 201);
     }
@@ -191,9 +204,10 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         RabKegiatan $rab
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $rab);
         $rab->update($this->dataRab($this->validasiRab($request)));
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil('Item RAB berhasil diperbarui.', $rab);
     }
@@ -203,9 +217,10 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         RabKegiatan $rab
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $rab);
         $rab->delete();
+        $this->tandaiPengubah($request, $kegiatan);
 
         return response()->json([
             'berhasil' => true,
@@ -230,10 +245,11 @@ class KomponenKegiatanApiController extends Controller
 
     public function storeTransaksi(Request $request, Kegiatan $kegiatan)
     {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $transaksi = $kegiatan->transaksi()->create(
             $this->validasiTransaksi($request)
         );
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil(
             'Transaksi berhasil ditambahkan.',
@@ -247,9 +263,10 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         TransaksiKegiatan $transaksi
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $transaksi);
         $transaksi->update($this->validasiTransaksi($request));
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil('Transaksi berhasil diperbarui.', $transaksi);
     }
@@ -259,9 +276,10 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         TransaksiKegiatan $transaksi
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $transaksi);
         $transaksi->delete();
+        $this->tandaiPengubah($request, $kegiatan);
 
         return response()->json([
             'berhasil' => true,
@@ -284,10 +302,11 @@ class KomponenKegiatanApiController extends Controller
 
     public function storePeserta(Request $request, Kegiatan $kegiatan)
     {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $peserta = $kegiatan->peserta()->create(
             $this->validasiPeserta($request)
         );
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil(
             'Peserta kegiatan berhasil ditambahkan.',
@@ -301,9 +320,10 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         PesertaKegiatan $peserta
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $peserta);
         $peserta->update($this->validasiPeserta($request));
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil('Peserta kegiatan berhasil diperbarui.', $peserta);
     }
@@ -313,9 +333,10 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         PesertaKegiatan $peserta
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $peserta);
         $peserta->delete();
+        $this->tandaiPengubah($request, $kegiatan);
 
         return response()->json([
             'berhasil' => true,
@@ -334,10 +355,11 @@ class KomponenKegiatanApiController extends Controller
 
     public function storeDokumentasi(Request $request, Kegiatan $kegiatan)
     {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $dokumentasi = $kegiatan->dokumentasi()->create(
             $this->validasiDokumentasi($request)
         );
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil(
             'Dokumentasi berhasil ditambahkan.',
@@ -351,9 +373,10 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         DokumentasiKegiatan $dokumentasi
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $dokumentasi);
         $dokumentasi->update($this->validasiDokumentasi($request));
+        $this->tandaiPengubah($request, $kegiatan);
 
         return $this->berhasil(
             'Dokumentasi berhasil diperbarui.',
@@ -366,9 +389,10 @@ class KomponenKegiatanApiController extends Controller
         Kegiatan $kegiatan,
         DokumentasiKegiatan $dokumentasi
     ) {
-        $this->pastikanKegiatanMilikPengguna($request, $kegiatan);
+        $this->pastikanKegiatanSesamaRole($request, $kegiatan);
         $this->pastikanKomponenMilikKegiatan($kegiatan, $dokumentasi);
         $dokumentasi->delete();
+        $this->tandaiPengubah($request, $kegiatan);
 
         return response()->json([
             'berhasil' => true,

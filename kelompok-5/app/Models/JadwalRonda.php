@@ -11,6 +11,7 @@ class JadwalRonda extends Model
 
     protected $fillable = [
         'dibuat_oleh',
+        'pengubah_id',
         'hari',
         'peserta',
         'waktu_mulai',
@@ -32,5 +33,10 @@ class JadwalRonda extends Model
     public function pengguna(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'dibuat_oleh');
+    }
+
+    public function pengubah(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'pengubah_id');
     }
 }

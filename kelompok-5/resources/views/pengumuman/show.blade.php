@@ -37,6 +37,9 @@
             <p class="mt-2 text-sm text-gray-500">
                 Dibuat oleh {{ $pengumuman->pengguna?->nama ?? '-' }}
             </p>
+            <p class="mt-1 text-sm text-gray-500">
+                Terakhir diedit oleh {{ $pengumuman->pengubah?->nama ?? 'Belum tercatat' }}
+            </p>
         </div>
 
         @if ($pengumuman->status === 'draft')

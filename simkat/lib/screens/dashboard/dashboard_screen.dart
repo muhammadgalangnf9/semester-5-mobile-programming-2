@@ -35,11 +35,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final response = await DashboardService.getDashboard(role: _role);
       final data = response['data'];
+      final dashboardData = data is Map
+          ? Map<String, dynamic>.from(data)
+          : <String, dynamic>{};
+      if (_role == 'warga_biasa') {
+        dashboardData['jadwal_ronda_saya'] = _jadwalRondaPengguna(
+          dashboardData['jadwal_ronda_saya'],
+        );
+      }
 
       if (!mounted) return;
 
       setState(() {
-        _dashboardData = data is Map ? Map<String, dynamic>.from(data) : {};
+        _dashboardData = dashboardData;
         _isLoading = false;
       });
     } catch (e) {
@@ -50,6 +58,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  List<dynamic> _jadwalRondaPengguna(dynamic jadwalData) {
+    final idPengguna = widget.pengguna['id']?.toString();
+    if (idPengguna == null || jadwalData is! List) return const [];
+
+    return jadwalData.where((item) {
+      if (item is! Map || item['peserta'] is! List) return false;
+      return (item['peserta'] as List).any(
+        (id) => id?.toString() == idPengguna,
+      );
+    }).toList();
   }
 
   @override
@@ -197,19 +217,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_role == 'warga_pj_kegiatan_dan_jadwal_ronda') {
       return [
         {
-          'title': 'Kegiatan Saya',
+          'title': 'Kegiatan Warga',
           'value': '${d['total_kegiatan_saya'] ?? 0}',
           'icon': Icons.event_note_outlined,
           'color': const Color(0xFF2563EB),
         },
         {
-          'title': 'Pengumuman Saya',
+          'title': 'Pengumuman Warga',
           'value': '${d['total_pengumuman_saya'] ?? 0}',
           'icon': Icons.campaign_outlined,
           'color': const Color(0xFF0891B2),
         },
         {
-          'title': 'Jadwal Ronda Saya',
+          'title': 'Jadwal Ronda Warga',
           'value': '${d['total_jadwal_ronda_saya'] ?? 0}',
           'icon': Icons.calendar_month_outlined,
           'color': const Color(0xFF16A34A),
@@ -218,19 +238,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     // Warga Biasa
-    final rondaSaya = (d['jadwal_ronda_saya'] as List?)?.length ?? 0;
+    final jadwalRonda = (d['jadwal_ronda_saya'] as List?)?.length ?? 0;
     final pengumuman = (d['pengumuman_terbaru'] as List?)?.length ?? 0;
     final kegiatan = (d['kegiatan_terbaru'] as List?)?.length ?? 0;
 
     return [
       {
-        'title': 'Jadwal Ronda Saya',
-        'value': '$rondaSaya',
+        'title': 'Jadwal Ronda Anda',
+        'value': '$jadwalRonda',
         'icon': Icons.calendar_month_outlined,
         'color': const Color(0xFF16A34A),
       },
       {
-        'title': 'Pengumuman Terbaru',
+        'title': 'Pengumuman',
         'value': '$pengumuman',
         'icon': Icons.campaign_outlined,
         'color': const Color(0xFF0891B2),
@@ -303,7 +323,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Column(
         children: [
           _buildDataSection(
-            title: 'Kegiatan Saya',
+            title: 'Kegiatan Warga',
             data: d['kegiatan_saya'] as List?,
             jenis: 'kegiatan',
             icon: Icons.event_note_outlined,
@@ -312,7 +332,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
           _buildDataSection(
-            title: 'Pengumuman Saya',
+            title: 'Pengumuman Warga',
             data: d['pengumuman_saya'] as List?,
             jenis: 'pengumuman',
             icon: Icons.campaign_outlined,
@@ -321,7 +341,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
           _buildDataSection(
-            title: 'Jadwal Ronda Saya',
+            title: 'Jadwal Ronda Warga',
             data: d['jadwal_ronda_saya'] as List?,
             jenis: 'jadwal_ronda',
             icon: Icons.calendar_month_outlined,
@@ -330,6 +350,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       );
+    }
+
+    if (_role == 'warga_biasa') {
+      return _buildWargaBiasaSections(d);
     }
 
     final aktivitas = d['aktivitas_terbaru'] as List?;
@@ -451,6 +475,141 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWargaBiasaSections(Map<String, dynamic> data) {
+    return Column(
+      children: [
+        _buildWargaBiasaSection(
+          title: 'Jadwal Ronda Anda',
+          items: data['jadwal_ronda_saya'] as List?,
+          jenis: 'jadwal_ronda',
+          route: '/jadwal-ronda',
+        ),
+        const SizedBox(height: 12),
+        _buildWargaBiasaSection(
+          title: 'Pengumuman',
+          items: data['pengumuman_terbaru'] as List?,
+          jenis: 'pengumuman',
+          route: '/pengumuman',
+          tampilkanSemua: true,
+        ),
+        const SizedBox(height: 12),
+        _buildWargaBiasaSection(
+          title: 'Kegiatan Lingkungan',
+          items: data['kegiatan_terbaru'] as List?,
+          jenis: 'kegiatan',
+          route: '/kegiatan',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWargaBiasaSection({
+    required String title,
+    required List<dynamic>? items,
+    required String jenis,
+    required String route,
+    bool tampilkanSemua = false,
+  }) {
+    final daftar = items ?? const [];
+    final yangDitampilkan = tampilkanSemua ? daftar : daftar.take(3).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => _bukaSemua(route),
+                child: const Text('Lihat semuanya'),
+              ),
+            ],
+          ),
+          if (yangDitampilkan.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Belum ada data.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              ),
+            )
+          else
+            ...yangDitampilkan.asMap().entries.map((entry) {
+              final item = entry.value;
+              final jadwal = item is Map
+                  ? Map<String, dynamic>.from(item)
+                  : <String, dynamic>{};
+              final judul = switch (jenis) {
+                'pengumuman' => jadwal['judul']?.toString() ?? '-',
+                'kegiatan' => jadwal['nama_kegiatan']?.toString() ?? '-',
+                _ => 'Gang ${jadwal['gang'] ?? '-'}',
+              };
+              final keterangan = switch (jenis) {
+                'pengumuman' => 'Pengumuman warga',
+                'kegiatan' => 'Lokasi: ${jadwal['lokasi'] ?? '-'}',
+                _ => _keteranganJadwal(jadwal),
+              };
+              return Column(
+                children: [
+                  if (entry.key > 0) const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                judul,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                keterangan,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }),
         ],
       ),
     );

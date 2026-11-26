@@ -146,6 +146,7 @@ class PesertaKegiatanController extends Controller
             'status_kehadiran' => $validated['status_kehadiran'],
             'keterangan' => $validated['keterangan'] ?? null,
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -177,6 +178,7 @@ class PesertaKegiatanController extends Controller
             'status_kehadiran' => $validated['status_kehadiran'],
             'keterangan' => $validated['keterangan'] ?? null,
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -197,6 +199,7 @@ class PesertaKegiatanController extends Controller
         $this->pastikanPesertaMilikKegiatan($kegiatan, $peserta);
 
         $peserta->delete();
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)
@@ -230,6 +233,7 @@ class PesertaKegiatanController extends Controller
         $peserta->update([
             'status_kehadiran' => $validated['status_kehadiran'],
         ]);
+        $kegiatan->update(['pengubah_id' => auth()->id()]);
 
         return redirect()
             ->route('kegiatan.show', $kegiatan->id)

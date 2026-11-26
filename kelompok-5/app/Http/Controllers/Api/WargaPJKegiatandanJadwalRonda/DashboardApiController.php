@@ -15,7 +15,7 @@ class DashboardApiController extends Controller
      */
     public function index(Request $request)
     {
-        $userId = $request->user()->id;
+        $roleId = $request->user()->role_id;
 
         // Jam dan sapaan
         $jam = (int) now()->format('H');
@@ -29,21 +29,34 @@ class DashboardApiController extends Controller
             $sapaan = 'Selamat malam';
         }
 
-        $totalKegiatanSaya = Kegiatan::where('dibuat_oleh', $userId)->count();
-        $totalPengumumanSaya = Pengumuman::where('pengguna_id', $userId)->count();
-        $totalJadwalRondaSaya = JadwalRonda::where('dibuat_oleh', $userId)->count();
+        $kegiatanSatuRole = fn () => Kegiatan::whereHas(
+            'pengguna',
+            fn ($query) => $query->where('role_id', $roleId)
+        );
+        $pengumumanSatuRole = fn () => Pengumuman::whereHas(
+            'pengguna',
+            fn ($query) => $query->where('role_id', $roleId)
+        );
+        $jadwalRondaSatuRole = fn () => JadwalRonda::whereHas(
+            'pengguna',
+            fn ($query) => $query->where('role_id', $roleId)
+        );
 
-        $kegiatanSaya = Kegiatan::where('dibuat_oleh', $userId)
+        $totalKegiatanSaya = $kegiatanSatuRole()->count();
+        $totalPengumumanSaya = $pengumumanSatuRole()->count();
+        $totalJadwalRondaSaya = $jadwalRondaSatuRole()->count();
+
+        $kegiatanSaya = $kegiatanSatuRole()
             ->latest()
             ->take(3)
             ->get();
 
-        $pengumumanSaya = Pengumuman::where('pengguna_id', $userId)
+        $pengumumanSaya = $pengumumanSatuRole()
             ->latest()
             ->take(3)
             ->get();
 
-        $jadwalRondaSaya = JadwalRonda::where('dibuat_oleh', $userId)
+        $jadwalRondaSaya = $jadwalRondaSatuRole()
             ->latest()
             ->take(3)
             ->get();

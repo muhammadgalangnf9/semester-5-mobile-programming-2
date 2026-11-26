@@ -11,6 +11,7 @@ class Pengumuman extends Model
 
     protected $fillable = [
         'pengguna_id',
+        'pengubah_id',
         'judul',
         'isi',
         'status',
@@ -28,6 +29,11 @@ class Pengumuman extends Model
     public function pengguna(): BelongsTo
     {
         return $this->belongsTo(Pengguna::class, 'pengguna_id');
+    }
+
+    public function pengubah(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'pengubah_id');
     }
 
     public function disetujuiOleh(): BelongsTo

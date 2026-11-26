@@ -92,11 +92,38 @@ class PengumumanController extends Controller
     /**
      * Menampilkan daftar pengumuman.
      */
-    public function index()
+    public function index(Request $request)
     {
         $pengguna = Auth::user();
 
+        $filter = $request->validate([
+            'nama_pengumuman' => ['nullable', 'string', 'max:150'],
+            'tanggal_dibuat' => ['nullable', 'date_format:Y-m-d'],
+            'status' => [
+                'nullable',
+                Rule::in([
+                    'draft',
+                    'menunggu_persetujuan',
+                    'terbit',
+                    'ditolak',
+                    'nonaktif',
+                ]),
+            ],
+        ]);
+
         $query = Pengumuman::with(['pengguna', 'disetujuiOleh'])
+            ->when(
+                $filter['nama_pengumuman'] ?? null,
+                fn ($query, $nama) => $query->where('judul', 'like', "%{$nama}%")
+            )
+            ->when(
+                $filter['tanggal_dibuat'] ?? null,
+                fn ($query, $tanggal) => $query->whereDate('created_at', $tanggal)
+            )
+            ->when(
+                $filter['status'] ?? null,
+                fn ($query, $status) => $query->where('status', $status)
+            )
             ->latest();
 
         // Ketua RT juga perlu melihat pengumuman yang menunggu persetujuan.
@@ -119,7 +146,7 @@ class PengumumanController extends Controller
             }
         }
 
-        $pengumuman = $query->paginate(10);
+        $pengumuman = $query->paginate(10)->withQueryString();
 
         return view('pengumuman.index', compact('pengumuman'));
     }
@@ -160,6 +187,7 @@ class PengumumanController extends Controller
         ]);
 
         $validated['pengguna_id'] = Auth::id();
+        $validated['pengubah_id'] = Auth::id();
         $validated['status'] = 'draft';
         $validated['diterbitkan_pada'] = null;
         $validated['dinonaktifkan_pada'] = null;
@@ -184,7 +212,7 @@ class PengumumanController extends Controller
     {
         $this->pastikanBolehMelihat($pengumuman);
 
-        $pengumuman->load(['pengguna', 'disetujuiOleh']);
+        $pengumuman->load(['pengguna', 'pengubah', 'disetujuiOleh']);
 
         return view('pengumuman.show', compact('pengumuman'));
     }
@@ -230,6 +258,7 @@ class PengumumanController extends Controller
 
         $pengumuman->judul = $validated['judul'];
         $pengumuman->isi = $validated['isi'];
+        $pengumuman->pengubah_id = Auth::id();
         if ($statusLama === 'terbit') {
             $pengumuman->status = 'menunggu_persetujuan';
             $pengumuman->diterbitkan_pada = null;
@@ -287,6 +316,7 @@ class PengumumanController extends Controller
         }
 
         $pengumuman->status = $statusBaru;
+        $pengumuman->pengubah_id = Auth::id();
         $pengumuman->save();
 
         LogAktivitas::create([
@@ -311,6 +341,7 @@ class PengumumanController extends Controller
 
         $pengumuman->update([
             'status' => 'menunggu_persetujuan',
+            'pengubah_id' => Auth::id(),
             'diterbitkan_pada' => null,
             'dinonaktifkan_pada' => null,
             'disetujui_oleh' => null,
@@ -338,6 +369,7 @@ class PengumumanController extends Controller
 
         $pengumuman->update([
             'status' => 'terbit',
+            'pengubah_id' => Auth::id(),
             'disetujui_oleh' => Auth::id(),
             'catatan_persetujuan' => $validated['catatan_persetujuan'] ?? null,
             'diterbitkan_pada' => now(),
@@ -365,6 +397,7 @@ class PengumumanController extends Controller
 
         $pengumuman->update([
             'status' => 'ditolak',
+            'pengubah_id' => Auth::id(),
             'disetujui_oleh' => null,
             'catatan_persetujuan' => $validated['catatan_persetujuan'],
             'diterbitkan_pada' => null,

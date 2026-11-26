@@ -10,9 +10,36 @@ use Illuminate\Validation\Rule;
 
 class PengumumanApiController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $pengumuman = Pengumuman::with('pengguna:id,nama')
+        $filter = $request->validate([
+            'nama_pengumuman' => ['nullable', 'string', 'max:150'],
+            'tanggal_dibuat' => ['nullable', 'date_format:Y-m-d'],
+            'status' => [
+                'nullable',
+                Rule::in([
+                    'draft',
+                    'menunggu_persetujuan',
+                    'terbit',
+                    'ditolak',
+                    'nonaktif',
+                ]),
+            ],
+        ]);
+
+        $pengumuman = Pengumuman::with(['pengguna:id,nama', 'pengubah:id,nama'])
+            ->when(
+                $filter['nama_pengumuman'] ?? null,
+                fn ($query, $nama) => $query->where('judul', 'like', "%{$nama}%")
+            )
+            ->when(
+                $filter['tanggal_dibuat'] ?? null,
+                fn ($query, $tanggal) => $query->whereDate('created_at', $tanggal)
+            )
+            ->when(
+                $filter['status'] ?? null,
+                fn ($query, $status) => $query->where('status', $status)
+            )
             ->latest()
             ->paginate(10);
 
@@ -36,6 +63,7 @@ class PengumumanApiController extends Controller
             'pesan' => 'Detail pengumuman berhasil diambil.',
             'data' => $pengumuman->load([
                 'pengguna:id,nama',
+                'pengubah:id,nama',
                 'disetujuiOleh:id,nama',
             ]),
         ]);
@@ -51,6 +79,7 @@ class PengumumanApiController extends Controller
         $pengumuman = Pengumuman::create([
             ...$validated,
             'pengguna_id' => $request->user()->id,
+            'pengubah_id' => $request->user()->id,
             'status' => 'draft',
             'diterbitkan_pada' => null,
             'dinonaktifkan_pada' => null,
@@ -65,7 +94,7 @@ class PengumumanApiController extends Controller
         return response()->json([
             'berhasil' => true,
             'pesan' => 'Pengumuman berhasil ditambahkan.',
-            'data' => $pengumuman->load('pengguna:id,nama'),
+            'data' => $pengumuman->load(['pengguna:id,nama', 'pengubah:id,nama']),
         ], 201);
     }
 
@@ -79,6 +108,7 @@ class PengumumanApiController extends Controller
         $statusLama = $pengumuman->status;
         $pengumuman->judul = $validated['judul'];
         $pengumuman->isi = $validated['isi'];
+        $pengumuman->pengubah_id = $request->user()->id;
 
         if ($statusLama === 'terbit') {
             $pengumuman->status = 'menunggu_persetujuan';
@@ -104,7 +134,7 @@ class PengumumanApiController extends Controller
         return response()->json([
             'berhasil' => true,
             'pesan' => 'Pengumuman berhasil diperbarui.',
-            'data' => $pengumuman->load('pengguna:id,nama'),
+            'data' => $pengumuman->load(['pengguna:id,nama', 'pengubah:id,nama']),
         ]);
     }
 
@@ -126,6 +156,7 @@ class PengumumanApiController extends Controller
             $pengumuman->disetujui_oleh = null;
             $pengumuman->catatan_persetujuan = null;
         }
+        $pengumuman->pengubah_id = $request->user()->id;
         $pengumuman->save();
 
         $this->catatAktivitas(
@@ -137,7 +168,7 @@ class PengumumanApiController extends Controller
         return response()->json([
             'berhasil' => true,
             'pesan' => 'Status pengumuman berhasil diperbarui.',
-            'data' => $pengumuman->load('pengguna:id,nama'),
+            'data' => $pengumuman->load(['pengguna:id,nama', 'pengubah:id,nama']),
         ]);
     }
 
@@ -152,6 +183,7 @@ class PengumumanApiController extends Controller
 
         $pengumuman->update([
             'status' => 'menunggu_persetujuan',
+            'pengubah_id' => $request->user()->id,
             'diterbitkan_pada' => null,
             'dinonaktifkan_pada' => null,
             'disetujui_oleh' => null,
@@ -167,7 +199,7 @@ class PengumumanApiController extends Controller
         return response()->json([
             'berhasil' => true,
             'pesan' => 'Pengumuman berhasil diajukan untuk persetujuan.',
-            'data' => $pengumuman->load('pengguna:id,nama'),
+            'data' => $pengumuman->load(['pengguna:id,nama', 'pengubah:id,nama']),
         ]);
     }
 
@@ -176,6 +208,7 @@ class PengumumanApiController extends Controller
         if ($pengumuman->status !== 'nonaktif') {
             $pengumuman->update([
                 'status' => 'nonaktif',
+                'pengubah_id' => $request->user()->id,
                 'dinonaktifkan_pada' => now(),
             ]);
         }
@@ -189,7 +222,7 @@ class PengumumanApiController extends Controller
         return response()->json([
             'berhasil' => true,
             'pesan' => 'Pengumuman berhasil dinonaktifkan.',
-            'data' => $pengumuman->load('pengguna:id,nama'),
+            'data' => $pengumuman->load(['pengguna:id,nama', 'pengubah:id,nama']),
         ]);
     }
 

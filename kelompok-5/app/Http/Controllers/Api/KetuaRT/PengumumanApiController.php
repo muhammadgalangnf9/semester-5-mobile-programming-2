@@ -6,13 +6,39 @@ use App\Http\Controllers\Controller;
 use App\Models\LogAktivitas;
 use App\Models\Pengumuman;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PengumumanApiController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $pengumuman = Pengumuman::with(['pengguna:id,nama', 'disetujuiOleh:id,nama'])
+        $filter = $request->validate([
+            'nama_pengumuman' => ['nullable', 'string', 'max:150'],
+            'tanggal_dibuat' => ['nullable', 'date_format:Y-m-d'],
+            'status' => [
+                'nullable',
+                Rule::in(['menunggu_persetujuan', 'terbit']),
+            ],
+        ]);
+
+        $pengumuman = Pengumuman::with([
+            'pengguna:id,nama',
+            'pengubah:id,nama',
+            'disetujuiOleh:id,nama',
+        ])
             ->whereIn('status', ['menunggu_persetujuan', 'terbit'])
+            ->when(
+                $filter['nama_pengumuman'] ?? null,
+                fn ($query, $nama) => $query->where('judul', 'like', "%{$nama}%")
+            )
+            ->when(
+                $filter['tanggal_dibuat'] ?? null,
+                fn ($query, $tanggal) => $query->whereDate('created_at', $tanggal)
+            )
+            ->when(
+                $filter['status'] ?? null,
+                fn ($query, $status) => $query->where('status', $status)
+            )
             ->orderByRaw("CASE WHEN status = 'menunggu_persetujuan' THEN 0 ELSE 1 END")
             ->orderByDesc('updated_at')
             ->paginate(10);
@@ -32,7 +58,11 @@ class PengumumanApiController extends Controller
 
     public function show($id)
     {
-        $pengumuman = Pengumuman::with(['pengguna:id,nama', 'disetujuiOleh:id,nama'])
+        $pengumuman = Pengumuman::with([
+            'pengguna:id,nama',
+            'pengubah:id,nama',
+            'disetujuiOleh:id,nama',
+        ])
             ->whereIn('status', ['menunggu_persetujuan', 'terbit'])
             ->find($id);
 
@@ -66,6 +96,7 @@ class PengumumanApiController extends Controller
 
         $pengumuman->update([
             'status' => 'terbit',
+            'pengubah_id' => $request->user()->id,
             'disetujui_oleh' => $request->user()->id,
             'catatan_persetujuan' => $validated['catatan_persetujuan'] ?? null,
             'diterbitkan_pada' => now(),
@@ -81,7 +112,11 @@ class PengumumanApiController extends Controller
         return response()->json([
             'berhasil' => true,
             'pesan' => 'Pengumuman berhasil disetujui dan diterbitkan.',
-            'data' => $pengumuman->load(['pengguna:id,nama', 'disetujuiOleh:id,nama']),
+            'data' => $pengumuman->load([
+                'pengguna:id,nama',
+                'pengubah:id,nama',
+                'disetujuiOleh:id,nama',
+            ]),
         ]);
     }
 
@@ -101,6 +136,7 @@ class PengumumanApiController extends Controller
 
         $pengumuman->update([
             'status' => 'ditolak',
+            'pengubah_id' => $request->user()->id,
             'disetujui_oleh' => null,
             'catatan_persetujuan' => $validated['catatan_persetujuan'],
             'diterbitkan_pada' => null,
@@ -115,7 +151,11 @@ class PengumumanApiController extends Controller
         return response()->json([
             'berhasil' => true,
             'pesan' => 'Pengumuman berhasil ditolak.',
-            'data' => $pengumuman->load(['pengguna:id,nama', 'disetujuiOleh:id,nama']),
+            'data' => $pengumuman->load([
+                'pengguna:id,nama',
+                'pengubah:id,nama',
+                'disetujuiOleh:id,nama',
+            ]),
         ]);
     }
 }

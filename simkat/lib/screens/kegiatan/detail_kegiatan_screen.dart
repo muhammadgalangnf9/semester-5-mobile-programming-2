@@ -745,11 +745,19 @@ class _DetailKegiatanScreenState extends State<DetailKegiatanScreen> {
     final namaPembuat = pengguna is Map
         ? pengguna['nama']?.toString() ?? '-'
         : '-';
+    final pengaju = kegiatan['pengaju'];
+    final namaPengaju = pengaju is Map
+        ? pengaju['nama']?.toString() ?? 'Belum tercatat'
+        : status == 'draft'
+        ? 'Belum diajukan'
+        : 'Belum tercatat';
+    final pengubah = kegiatan['pengubah'];
+    final namaPengubah = pengubah is Map
+        ? pengubah['nama']?.toString() ?? 'Belum tercatat'
+        : 'Belum tercatat';
     final penyetuju = kegiatan['disetujui_oleh'];
     final namaPenyetuju = penyetuju is Map
-        ? penyetuju['nama']?.toString() ??
-              penyetuju['name']?.toString() ??
-              '-'
+        ? penyetuju['nama']?.toString() ?? penyetuju['name']?.toString() ?? '-'
         : '-';
 
     return RefreshIndicator(
@@ -829,6 +837,16 @@ class _DetailKegiatanScreenState extends State<DetailKegiatanScreen> {
                 icon: Icons.person_outline,
                 label: 'Dibuat oleh',
                 value: namaPembuat,
+              ),
+              _buildInformasi(
+                icon: Icons.send_outlined,
+                label: 'Diajukan oleh',
+                value: namaPengaju,
+              ),
+              _buildInformasi(
+                icon: Icons.edit_outlined,
+                label: 'Terakhir diedit oleh',
+                value: namaPengubah,
               ),
               _buildInformasi(
                 icon: Icons.publish_outlined,

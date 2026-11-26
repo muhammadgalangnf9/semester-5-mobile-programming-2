@@ -246,13 +246,14 @@ class _KegiatanScreenState extends State<KegiatanScreen> {
                   DropdownMenuItem(value: 'semua', child: Text('Semua Status')),
                   DropdownMenuItem(
                     value: 'disetujui',
-                    child: Text('Disetujui Aktif'),
+                    child: Text('Disetujui'),
                   ),
                   DropdownMenuItem(
                     value: 'menunggu_persetujuan',
-                    child: Text('Menunggu Persetujuan Aktif'),
+                    child: Text('Menunggu Persetujuan'),
                   ),
-                  DropdownMenuItem(value: 'draft', child: Text('Draft Aktif')),
+                  DropdownMenuItem(value: 'draft', child: Text('Draft')),
+                  DropdownMenuItem(value: 'ditolak', child: Text('Ditolak')),
                   DropdownMenuItem(value: 'nonaktif', child: Text('Nonaktif')),
                 ],
                 onChanged: (status) {

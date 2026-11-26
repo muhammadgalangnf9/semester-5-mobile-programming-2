@@ -162,6 +162,26 @@
                 </p>
             </div>
 
+            <div>
+                <p class="text-sm text-gray-500 mb-1">
+                    Diajukan Oleh
+                </p>
+
+                <p class="font-semibold text-gray-800">
+                    {{ $kegiatan->pengaju?->nama ?? ($kegiatan->status === 'draft' ? 'Belum diajukan' : 'Belum tercatat') }}
+                </p>
+            </div>
+
+            <div>
+                <p class="text-sm text-gray-500 mb-1">
+                    Terakhir Diedit Oleh
+                </p>
+
+                <p class="font-semibold text-gray-800">
+                    {{ $kegiatan->pengubah?->nama ?? 'Belum tercatat' }}
+                </p>
+            </div>
+
             {{-- INFORMASI PENCATATAN --}}
             <div class="pt-5 border-t border-gray-100 space-y-4">
 
